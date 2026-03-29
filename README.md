@@ -1,33 +1,54 @@
-This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
+# x-extension-template
 
-## Getting Started
+A Chrome extension template that captures tweets in real-time as you browse Twitter/X.
 
-First, run the development server:
+The extension intercepts X's API responses, normalizes the tweet data into a clean schema, and forwards it to a background service worker where you can process it however you like.
+
+### Supported feeds
+
+-   Main feed
+-   Bookmarks
+-   Post notifications
+-   Tweet view (thread + replies)
+-   User profile (tweets/replies/highlights)
+
+## How it works
+
+1. **Interceptor** (`contents/interceptor.ts`) — Runs in the page's main world and monkey-patches `fetch` and `XMLHttpRequest` to capture responses from Twitter's GraphQL and REST APIs.
+
+2. **Capture** (`contents/capture.ts`) — Runs in the isolated world, receives intercepted payloads via `CustomEvent`, extracts and normalizes tweets, then sends them to the background.
+
+3. **Background handler** (`background/messages/capture.ts`) — Receives normalized tweets via Plasmo messaging. This is where you add your own logic (store to a database, send to an API, etc.).
+
+## Getting started
 
 ```bash
-pnpm dev
-# or
-npm run dev
+bun install
+bun dev
 ```
 
-Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
+Load the extension in Chrome by navigating to `chrome://extensions`, enabling Developer Mode, and loading the `build/chrome-mv3-dev` directory.
 
-You can start editing the popup by modifying `popup.tsx`. It should auto-update as you make changes. To add an options page, simply add a `options.tsx` file to the root of the project, with a react component default exported. Likewise to add a content page, add a `content.ts` file to the root of the project, importing some module and do some logic, then reload the extension on your browser.
-
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
-
-## Making production build
-
-Run the following:
+To build for production:
 
 ```bash
-pnpm build
-# or
-npm run build
+bun build
 ```
 
-This should create a production bundle for your extension, ready to be zipped and published to the stores.
+## Making it your own
 
-## Submit to the webstores
+Edit `src/background/messages/capture.ts` to do something with the captured tweets. The handler receives a typed payload with:
 
-The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
+```ts
+{
+    capturedAt: string        // ISO 8601 timestamp
+    context: TrackedEndpoint  // page we got the tweets from
+    tweets: NormalizedTweet[] // extracted tweets
+}
+```
+
+You should also update `CAPTURE_EVENT` in `src/utils/types.ts` and `INSTALLED_FLAG` in `src/contents/interceptor.ts` to something unique to your extension, to avoid collisions if the user has multiple extensions based on this template.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE file](LICENSE) for details.
